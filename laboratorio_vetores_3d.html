@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratório de Vetores 3D</title>
+    <style>
+        :root {
+            --bg: #07111f;
+            --panel: #0d1b2d;
+            --panel-2: #11243a;
+            --border: #23405e;
+            --text: #e8f0f8;
+            --muted: #93a9bf;
+            --a: #38bdf8;
+            --b: #fb7185;
+            --result: #facc15;
+            --aux: #a78bfa;
+            --green: #4ade80;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body { height: 100%; }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            color: var(--text);
+            background: var(--bg);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        button, select, input { font: inherit; }
+
+        .app {
+            height: 100%;
+            display: grid;
+            grid-template-rows: auto 1fr;
+        }
+
+        header {
+            min-height: 72px;
+            padding: 14px 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            background: rgba(10, 24, 40, 0.96);
+            border-bottom: 1px solid var(--border);
+            z-index: 5;
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 1.15rem;
+            letter-spacing: 0.01em;
+        }
+
+        .brand p {
+            margin: 4px 0 0;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+
+        .header-actions { display: flex; gap: 8px; }
+
+        button {
+            color: var(--text);
+            background: #142a42;
+            border: 1px solid #2c4b69;
+            border-radius: 8px;
+            padding: 8px 11px;
+            cursor: pointer;
+            transition: background 120ms, border-color 120ms;
+        }
+
+        button:hover { background: #1a3856; border-color: #3b6388; }
+
+        main {
+            min-height: 0;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 390px;
+        }
+
+        .viewport {
+            min-width: 0;
+            min-height: 0;
+            position: relative;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 50% 42%, rgba(29, 78, 115, 0.28), transparent 48%),
+                #07111f;
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        canvas.dragging { cursor: grabbing; }
+
+        .hint, .legend {
+            position: absolute;
+            padding: 9px 11px;
+            border: 1px solid rgba(75, 112, 145, 0.55);
+            border-radius: 9px;
+            background: rgba(8, 22, 37, 0.82);
+            backdrop-filter: blur(8px);
+            color: var(--muted);
+            font-size: 0.74rem;
+            pointer-events: none;
+        }
+
+        .hint { left: 14px; bottom: 14px; }
+        .legend { top: 14px; left: 14px; display: flex; flex-wrap: wrap; gap: 12px; }
+        .legend span { display: inline-flex; align-items: center; gap: 6px; }
+        .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+        aside {
+            min-height: 0;
+            overflow-y: auto;
+            padding: 20px;
+            background: var(--panel);
+            border-left: 1px solid var(--border);
+        }
+
+        .section { margin-bottom: 22px; }
+
+        .section-title {
+            margin: 0 0 10px;
+            color: #c7d8e9;
+            font-size: 0.72rem;
+            font-weight: 750;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            color: var(--text);
+            background: var(--panel-2);
+            border: 1px solid #315170;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        select:focus { border-color: var(--a); }
+
+        .vector-card {
+            padding: 13px;
+            margin-bottom: 10px;
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        .vector-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .magnitude { color: var(--muted); font-size: 0.75rem; font-weight: 500; }
+
+        .component {
+            display: grid;
+            grid-template-columns: 18px 1fr 44px;
+            align-items: center;
+            gap: 8px;
+            margin: 7px 0;
+            font-size: 0.78rem;
+        }
+
+        .component label { color: var(--muted); font-weight: 700; }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--a);
+        }
+
+        .vector-b input[type="range"] { accent-color: var(--b); }
+        .scalar input[type="range"] { accent-color: var(--aux); }
+
+        output {
+            padding: 3px 4px;
+            color: #dce9f5;
+            background: #091827;
+            border-radius: 5px;
+            text-align: center;
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        }
+
+        .scalar {
+            padding: 10px 12px;
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+        }
+
+        .scalar-row { display: grid; grid-template-columns: 1fr 48px; align-items: center; gap: 8px; }
+
+        .explanation {
+            color: #b6c7d8;
+            font-size: 0.86rem;
+            line-height: 1.55;
+        }
+
+        .explanation strong { color: #eef6ff; }
+
+        .math-box {
+            padding: 13px;
+            background: #081725;
+            border: 1px solid #294862;
+            border-left: 4px solid var(--result);
+            border-radius: 8px;
+            color: #dbe9f5;
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            font-size: 0.82rem;
+            line-height: 1.65;
+            overflow-wrap: anywhere;
+        }
+
+        .result { color: var(--result); font-weight: 750; }
+        .note { color: var(--muted); font-size: 0.74rem; margin-top: 8px; }
+
+        @media (max-width: 850px) {
+            body { overflow: auto; }
+            .app { min-height: 100%; height: auto; }
+            header { align-items: flex-start; }
+            .brand p { display: none; }
+            main { grid-template-columns: 1fr; grid-template-rows: 55vh auto; }
+            aside { border-left: 0; border-top: 1px solid var(--border); overflow: visible; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header>
+            <div class="brand">
+                <h1>Laboratório de Vetores 3D</h1>
+                <p>Operações vetoriais e visualização espacial — sem matrizes</p>
+            </div>
+            <div class="header-actions">
+                <button id="reset-vectors" type="button">Restaurar vetores</button>
+                <button id="reset-camera" type="button">Resetar câmera</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="viewport" id="viewport" aria-label="Visualização tridimensional dos vetores">
+                <canvas id="canvas"></canvas>
+                <div class="legend" id="legend"></div>
+                <div class="hint">Arraste para girar · Scroll para aproximar</div>
+            </section>
+
+            <aside>
+                <div class="section">
+                    <h2 class="section-title">Operação</h2>
+                    <select id="operation">
+                        <option value="view">Visualização livre</option>
+                        <option value="add">Soma: a + b</option>
+                        <option value="sub">Subtração: a − b</option>
+                        <option value="scalar">Multiplicação escalar: c · a</option>
+                        <option value="norm">Módulo e normalização</option>
+                        <option value="dot">Produto escalar e ângulo</option>
+                        <option value="cross">Produto vetorial: a × b</option>
+                    </select>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">Componentes</h2>
+                    <div class="vector-card vector-a">
+                        <div class="vector-heading">
+                            <span style="color: var(--a)">Vetor a</span>
+                            <span class="magnitude" id="mag-a"></span>
+                        </div>
+                        <div class="component"><label for="ax">x</label><input id="ax" type="range" min="-5" max="5" step="0.1"><output id="ax-out"></output></div>
+                        <div class="component"><label for="ay">y</label><input id="ay" type="range" min="-5" max="5" step="0.1"><output id="ay-out"></output></div>
+                        <div class="component"><label for="az">z</label><input id="az" type="range" min="-5" max="5" step="0.1"><output id="az-out"></output></div>
+                    </div>
+
+                    <div class="vector-card vector-b" id="vector-b-card">
+                        <div class="vector-heading">
+                            <span style="color: var(--b)">Vetor b</span>
+                            <span class="magnitude" id="mag-b"></span>
+                        </div>
+                        <div class="component"><label for="bx">x</label><input id="bx" type="range" min="-5" max="5" step="0.1"><output id="bx-out"></output></div>
+                        <div class="component"><label for="by">y</label><input id="by" type="range" min="-5" max="5" step="0.1"><output id="by-out"></output></div>
+                        <div class="component"><label for="bz">z</label><input id="bz" type="range" min="-5" max="5" step="0.1"><output id="bz-out"></output></div>
+                    </div>
+
+                    <div class="scalar" id="scalar-control" hidden>
+                        <div class="scalar-row">
+                            <input id="scalar" type="range" min="-3" max="3" value="1.5" step="0.1">
+                            <output id="scalar-out">1.5</output>
+                        </div>
+                        <div class="note">Constante escalar c</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">Interpretação</h2>
+                    <div class="explanation" id="explanation"></div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">Cálculo</h2>
+                    <div class="math-box" id="math"></div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <script>
+        'use strict';
+
+        const canvas = document.getElementById('canvas');
+        const viewport = document.getElementById('viewport');
+        const ctx = canvas.getContext('2d');
+
+        const defaults = {
+            a: { x: 3, y: 2, z: 1 },
+            b: { x: -1, y: 3, z: 2 },
+            scalar: 1.5
+        };
+
+        const state = {
+            a: { ...defaults.a },
+            b: { ...defaults.b },
+            scalar: defaults.scalar,
+            operation: 'view',
+            camera: { yaw: -0.72, pitch: 0.48, zoom: 1 },
+            dragging: false,
+            lastX: 0,
+            lastY: 0
+        };
+
+        const V = {
+            add: (u, v) => ({ x: u.x + v.x, y: u.y + v.y, z: u.z + v.z }),
+            sub: (u, v) => ({ x: u.x - v.x, y: u.y - v.y, z: u.z - v.z }),
+            scale: (u, c) => ({ x: u.x * c, y: u.y * c, z: u.z * c }),
+            dot: (u, v) => u.x * v.x + u.y * v.y + u.z * v.z,
+            cross: (u, v) => ({
+                x: u.y * v.z - u.z * v.y,
+                y: u.z * v.x - u.x * v.z,
+                z: u.x * v.y - u.y * v.x
+            }),
+            len: u => Math.hypot(u.x, u.y, u.z),
+            norm: u => {
+                const length = V.len(u);
+                return length < 1e-9 ? { x: 0, y: 0, z: 0 } : V.scale(u, 1 / length);
+            }
+        };
+
+        const origin = { x: 0, y: 0, z: 0 };
+
+        function fmt(n, decimals = 2) {
+            const safe = Math.abs(n) < 0.0005 ? 0 : n;
+            return Number(safe).toFixed(decimals);
+        }
+
+        function vectorText(v, decimals = 2) {
+            return `(${fmt(v.x, decimals)}, ${fmt(v.y, decimals)}, ${fmt(v.z, decimals)})`;
+        }
+
+        function sceneExtent() {
+            const vectors = [state.a, state.b];
+            if (state.operation === 'add') vectors.push(V.add(state.a, state.b));
+            if (state.operation === 'sub') vectors.push(V.sub(state.a, state.b), V.scale(state.b, -1));
+            if (state.operation === 'scalar') vectors.push(V.scale(state.a, state.scalar));
+            if (state.operation === 'cross') vectors.push(V.cross(state.a, state.b));
+            return Math.max(7, ...vectors.flatMap(v => [Math.abs(v.x), Math.abs(v.y), Math.abs(v.z)])) + 0.5;
+        }
+
+        // A câmera orbital usa diretamente trigonometria. Não há matrizes neste laboratório.
+        function project(p) {
+            const { yaw, pitch, zoom } = state.camera;
+            const cy = Math.cos(yaw);
+            const sy = Math.sin(yaw);
+            const cp = Math.cos(pitch);
+            const sp = Math.sin(pitch);
+
+            const horizontal = p.x * cy - p.z * sy;
+            const depthYaw = p.x * sy + p.z * cy;
+            const vertical = p.y * cp - depthYaw * sp;
+            const depth = p.y * sp + depthYaw * cp;
+            const unit = Math.min(canvas.clientWidth, canvas.clientHeight) * 0.42 * zoom / sceneExtent();
+
+            return {
+                x: canvas.clientWidth * 0.5 + horizontal * unit,
+                y: canvas.clientHeight * 0.54 - vertical * unit,
+                depth
+            };
+        }
+
+        function line3D(from, to, color, width = 1.5, dashed = false, alpha = 1) {
+            const a = project(from);
+            const b = project(to);
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.setLineDash(dashed ? [6, 6] : []);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function label3D(p, text, color, offsetX = 8, offsetY = -8) {
+            const s = project(p);
+            ctx.save();
+            ctx.font = '600 13px Inter, system-ui, sans-serif';
+            ctx.fillStyle = color;
+            ctx.shadowColor = '#07111f';
+            ctx.shadowBlur = 4;
+            ctx.fillText(text, s.x + offsetX, s.y + offsetY);
+            ctx.restore();
+        }
+
+        function arrow3D(from, to, color, label, width = 3) {
+            const a = project(from);
+            const b = project(to);
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const screenLength = Math.hypot(dx, dy);
+
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = width;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+
+            if (screenLength > 2) {
+                const angle = Math.atan2(dy, dx);
+                const head = Math.min(13, Math.max(8, screenLength * 0.18));
+                ctx.beginPath();
+                ctx.moveTo(b.x, b.y);
+                ctx.lineTo(b.x - head * Math.cos(angle - 0.48), b.y - head * Math.sin(angle - 0.48));
+                ctx.lineTo(b.x - head * Math.cos(angle + 0.48), b.y - head * Math.sin(angle + 0.48));
+                ctx.closePath();
+                ctx.fill();
+            }
+            ctx.restore();
+
+            if (label) label3D(to, label, color);
+        }
+
+        function point3D(p, color, radius = 4) {
+            const s = project(p);
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawGrid() {
+            const size = 6;
+            for (let i = -size; i <= size; i++) {
+                const major = i === 0;
+                line3D({ x: -size, y: 0, z: i }, { x: size, y: 0, z: i }, major ? '#34536d' : '#18324a', major ? 1.5 : 1, false, major ? 0.8 : 0.62);
+                line3D({ x: i, y: 0, z: -size }, { x: i, y: 0, z: size }, major ? '#34536d' : '#18324a', major ? 1.5 : 1, false, major ? 0.8 : 0.62);
+            }
+
+            arrow3D(origin, { x: 6.5, y: 0, z: 0 }, '#f87171', 'X', 2);
+            arrow3D(origin, { x: 0, y: 6.5, z: 0 }, '#4ade80', 'Y', 2);
+            arrow3D(origin, { x: 0, y: 0, z: 6.5 }, '#60a5fa', 'Z', 2);
+            point3D(origin, '#e8f0f8', 3);
+            label3D(origin, 'O', '#b8cadb', 7, 15);
+        }
+
+        function drawUnitCircles() {
+            const steps = 64;
+            const planes = [
+                t => ({ x: Math.cos(t), y: Math.sin(t), z: 0 }),
+                t => ({ x: Math.cos(t), y: 0, z: Math.sin(t) }),
+                t => ({ x: 0, y: Math.cos(t), z: Math.sin(t) })
+            ];
+            planes.forEach(makePoint => {
+                for (let i = 0; i < steps; i++) {
+                    const t1 = i * Math.PI * 2 / steps;
+                    const t2 = (i + 1) * Math.PI * 2 / steps;
+                    line3D(makePoint(t1), makePoint(t2), '#7c8fa3', 1, false, 0.42);
+                }
+            });
+        }
+
+        function renderVectors() {
+            const { a, b, operation, scalar } = state;
+            arrow3D(origin, a, '#38bdf8', 'a');
+
+            if (operation !== 'scalar' && operation !== 'norm') {
+                arrow3D(origin, b, '#fb7185', 'b');
+            }
+
+            if (operation === 'add') {
+                const result = V.add(a, b);
+                line3D(a, result, '#fb7185', 1.5, true, 0.75);
+                line3D(b, result, '#38bdf8', 1.5, true, 0.75);
+                arrow3D(origin, result, '#facc15', 'a + b', 4);
+            } else if (operation === 'sub') {
+                const negativeB = V.scale(b, -1);
+                const result = V.sub(a, b);
+                arrow3D(origin, negativeB, '#a78bfa', '−b', 2.5);
+                line3D(a, result, '#a78bfa', 1.5, true, 0.75);
+                arrow3D(origin, result, '#facc15', 'a − b', 4);
+                line3D(b, a, '#facc15', 1.5, true, 0.5);
+            } else if (operation === 'scalar') {
+                const result = V.scale(a, scalar);
+                arrow3D(origin, result, '#facc15', 'c · a', 4);
+            } else if (operation === 'norm') {
+                drawUnitCircles();
+                const normalized = V.norm(a);
+                arrow3D(origin, normalized, '#facc15', 'â', 4);
+            } else if (operation === 'dot') {
+                const bLengthSquared = V.dot(b, b);
+                if (bLengthSquared > 1e-9) {
+                    const projection = V.scale(b, V.dot(a, b) / bLengthSquared);
+                    arrow3D(origin, projection, '#a78bfa', 'projᵦ(a)', 3);
+                    line3D(projection, a, '#a78bfa', 1.5, true, 0.8);
+                }
+            } else if (operation === 'cross') {
+                const result = V.cross(a, b);
+                const corner = V.add(a, b);
+                line3D(a, corner, '#fb7185', 1.3, true, 0.55);
+                line3D(b, corner, '#38bdf8', 1.3, true, 0.55);
+                arrow3D(origin, result, '#facc15', 'a × b', 4);
+            }
+        }
+
+        function render() {
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            ctx.clearRect(0, 0, width, height);
+            drawGrid();
+            renderVectors();
+        }
+
+        function resize() {
+            const ratio = Math.max(1, window.devicePixelRatio || 1);
+            const rect = viewport.getBoundingClientRect();
+            canvas.width = Math.round(rect.width * ratio);
+            canvas.height = Math.round(rect.height * ratio);
+            canvas.style.width = `${rect.width}px`;
+            canvas.style.height = `${rect.height}px`;
+            ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+            render();
+        }
+
+        function updateInformation() {
+            const { a, b, scalar, operation } = state;
+            const lenA = V.len(a);
+            const lenB = V.len(b);
+            const math = document.getElementById('math');
+            const explanation = document.getElementById('explanation');
+            const legend = document.getElementById('legend');
+
+            document.getElementById('mag-a').textContent = `|a| = ${fmt(lenA)}`;
+            document.getElementById('mag-b').textContent = `|b| = ${fmt(lenB)}`;
+
+            let html = '<span><i class="dot" style="background:#38bdf8"></i>a</span>';
+            if (operation !== 'scalar' && operation !== 'norm') html += '<span><i class="dot" style="background:#fb7185"></i>b</span>';
+            if (operation !== 'view') html += '<span><i class="dot" style="background:#facc15"></i>resultado</span>';
+            legend.innerHTML = html;
+
+            if (operation === 'view') {
+                explanation.innerHTML = 'Um vetor 3D representa um <strong>deslocamento no espaço</strong>. Ele possui componentes nos eixos X, Y e Z, além de módulo, direção e sentido.';
+                math.innerHTML = `a = ${vectorText(a)}<br>b = ${vectorText(b)}<br><br>|a| = √(ax² + ay² + az²) = <span class="result">${fmt(lenA)}</span><br>|b| = <span class="result">${fmt(lenB)}</span>`;
+            } else if (operation === 'add') {
+                const r = V.add(a, b);
+                explanation.innerHTML = 'A soma é feita <strong>componente a componente</strong>. Geometricamente, a diagonal amarela fecha o paralelogramo formado por a e b.';
+                math.innerHTML = `a + b<br>= (${fmt(a.x)} + ${fmt(b.x)}, ${fmt(a.y)} + ${fmt(b.y)}, ${fmt(a.z)} + ${fmt(b.z)})<br>= <span class="result">${vectorText(r)}</span>`;
+            } else if (operation === 'sub') {
+                const r = V.sub(a, b);
+                explanation.innerHTML = 'Subtrair b equivale a somar o seu oposto: <strong>a − b = a + (−b)</strong>. O resultado também aponta da extremidade de b para a extremidade de a.';
+                math.innerHTML = `a − b<br>= (${fmt(a.x)} − ${fmt(b.x)}, ${fmt(a.y)} − ${fmt(b.y)}, ${fmt(a.z)} − ${fmt(b.z)})<br>= <span class="result">${vectorText(r)}</span>`;
+            } else if (operation === 'scalar') {
+                const r = V.scale(a, scalar);
+                explanation.innerHTML = 'O escalar altera o módulo do vetor. Um valor negativo também <strong>inverte o sentido</strong>; o valor zero produz o vetor nulo.';
+                math.innerHTML = `${fmt(scalar, 1)} · a<br>= ${fmt(scalar, 1)} · ${vectorText(a)}<br>= <span class="result">${vectorText(r)}</span><br><br>|c · a| = ${fmt(V.len(r))}`;
+            } else if (operation === 'norm') {
+                const n = V.norm(a);
+                const zeroWarning = lenA < 1e-9 ? '<br><span style="color:#fb7185">O vetor nulo não possui direção e não pode ser normalizado.</span>' : '';
+                explanation.innerHTML = 'Normalizar preserva a direção e o sentido, mas transforma o módulo em <strong>uma unidade</strong>. Os círculos representam cortes da esfera unitária.' + zeroWarning;
+                math.innerHTML = `â = a / |a|<br>= ${vectorText(a)} / ${fmt(lenA)}<br>= <span class="result">${vectorText(n)}</span><br><br>|â| = ${fmt(V.len(n))}`;
+            } else if (operation === 'dot') {
+                const dot = V.dot(a, b);
+                const denominator = lenA * lenB;
+                const cosine = denominator > 1e-9 ? Math.max(-1, Math.min(1, dot / denominator)) : 0;
+                const angle = denominator > 1e-9 ? Math.acos(cosine) * 180 / Math.PI : 0;
+                let relation = dot > 0.001 ? 'ângulo agudo' : dot < -0.001 ? 'ângulo obtuso' : 'vetores perpendiculares';
+                if (denominator < 1e-9) relation = 'ângulo indefinido devido ao vetor nulo';
+                explanation.innerHTML = `O produto escalar mede o quanto os vetores apontam na mesma direção. Neste caso: <strong>${relation}</strong>. A seta roxa mostra a projeção de a sobre b.`;
+                math.innerHTML = `a · b = ax·bx + ay·by + az·bz<br>= <span class="result">${fmt(dot)}</span><br><br>cos(θ) = (a · b) / (|a||b|)<br>θ = <span class="result">${fmt(angle, 1)}°</span>`;
+            } else if (operation === 'cross') {
+                const r = V.cross(a, b);
+                const area = V.len(r);
+                explanation.innerHTML = 'O produto vetorial existe no espaço 3D e gera um vetor <strong>perpendicular a a e b</strong>. Seu módulo é a área do paralelogramo formado por eles.';
+                math.innerHTML = `a × b = (ay·bz − az·by,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;az·bx − ax·bz,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ax·by − ay·bx)<br>= <span class="result">${vectorText(r)}</span><br><br>Área = |a × b| = <span class="result">${fmt(area)}</span><br>a · (a × b) = ${fmt(V.dot(a, r))}<br>b · (a × b) = ${fmt(V.dot(b, r))}`;
+            }
+        }
+
+        function syncControls() {
+            ['a', 'b'].forEach(name => {
+                ['x', 'y', 'z'].forEach(axis => {
+                    const id = name + axis;
+                    const input = document.getElementById(id);
+                    input.value = state[name][axis];
+                    document.getElementById(id + '-out').value = fmt(state[name][axis], 1);
+                });
+            });
+            document.getElementById('scalar').value = state.scalar;
+            document.getElementById('scalar-out').value = fmt(state.scalar, 1);
+            updateInformation();
+            render();
+        }
+
+        ['a', 'b'].forEach(name => {
+            ['x', 'y', 'z'].forEach(axis => {
+                const id = name + axis;
+                document.getElementById(id).addEventListener('input', event => {
+                    state[name][axis] = Number(event.target.value);
+                    document.getElementById(id + '-out').value = fmt(state[name][axis], 1);
+                    updateInformation();
+                    render();
+                });
+            });
+        });
+
+        document.getElementById('operation').addEventListener('change', event => {
+            state.operation = event.target.value;
+            const needsB = !['scalar', 'norm'].includes(state.operation);
+            document.getElementById('vector-b-card').hidden = !needsB;
+            document.getElementById('scalar-control').hidden = state.operation !== 'scalar';
+            updateInformation();
+            render();
+        });
+
+        document.getElementById('scalar').addEventListener('input', event => {
+            state.scalar = Number(event.target.value);
+            document.getElementById('scalar-out').value = fmt(state.scalar, 1);
+            updateInformation();
+            render();
+        });
+
+        document.getElementById('reset-vectors').addEventListener('click', () => {
+            state.a = { ...defaults.a };
+            state.b = { ...defaults.b };
+            state.scalar = defaults.scalar;
+            syncControls();
+        });
+
+        document.getElementById('reset-camera').addEventListener('click', () => {
+            state.camera = { yaw: -0.72, pitch: 0.48, zoom: 1 };
+            render();
+        });
+
+        canvas.addEventListener('pointerdown', event => {
+            state.dragging = true;
+            state.lastX = event.clientX;
+            state.lastY = event.clientY;
+            canvas.classList.add('dragging');
+            canvas.setPointerCapture(event.pointerId);
+        });
+
+        canvas.addEventListener('pointermove', event => {
+            if (!state.dragging) return;
+            const dx = event.clientX - state.lastX;
+            const dy = event.clientY - state.lastY;
+            state.camera.yaw += dx * 0.008;
+            state.camera.pitch = Math.max(-1.45, Math.min(1.45, state.camera.pitch + dy * 0.008));
+            state.lastX = event.clientX;
+            state.lastY = event.clientY;
+            render();
+        });
+
+        function stopDragging(event) {
+            state.dragging = false;
+            canvas.classList.remove('dragging');
+            if (event.pointerId !== undefined && canvas.hasPointerCapture(event.pointerId)) {
+                canvas.releasePointerCapture(event.pointerId);
+            }
+        }
+
+        canvas.addEventListener('pointerup', stopDragging);
+        canvas.addEventListener('pointercancel', stopDragging);
+
+        canvas.addEventListener('wheel', event => {
+            event.preventDefault();
+            state.camera.zoom = Math.max(0.55, Math.min(2.2, state.camera.zoom * Math.exp(-event.deltaY * 0.001)));
+            render();
+        }, { passive: false });
+
+        window.addEventListener('resize', resize);
+
+        syncControls();
+        resize();
+    </script>
+</body>
+</html>
