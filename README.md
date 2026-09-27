@@ -29,7 +29,7 @@ A proposta é reunir, em uma única aplicação, diferentes conteúdos abordados
 
 ## 🚧 Progresso atual
 
-Atualmente, o **módulo de vetores** está implementado, incluindo a representação tridimensional e diferentes operações vetoriais.
+Atualmente, os **módulos de vetores e matrizes 3×3** estão implementados, incluindo operações vetoriais e transformações lineares no espaço tridimensional.
 
 ### Implementado
 
@@ -41,10 +41,15 @@ Atualmente, o **módulo de vetores** está implementado, incluindo a representa�
 - [x] Produto vetorial
 - [x] Visualização dos cálculos
 - [x] Controle interativo da câmera
+- [x] Criação e edição de matriz 3×3
+- [x] Multiplicação de matriz por vetor 3D
+- [x] Aba exclusiva para operações com matrizes
+- [x] Soma, subtração e produto de matrizes
+- [x] Matriz transposta e determinante
+- [x] Visualização WebGL do efeito de uma transformação linear
 
 ### Próximas etapas
 
-- [ ] Criação e visualização de matrizes
 - [ ] Transformações de translação
 - [ ] Transformações de rotação
 - [ ] Transformações de escala

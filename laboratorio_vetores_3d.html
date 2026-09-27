@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laboratório de Vetores 3D</title>
+    <title>Laboratório de Vetores e Matrizes 3D</title>
     <style>
         :root {
             --bg: #07111f;
@@ -102,6 +102,16 @@
         }
 
         canvas.dragging { cursor: grabbing; }
+
+        .scene-labels { position: absolute; inset: 0; pointer-events: none; }
+        .scene-label {
+            position: absolute;
+            font: 600 13px Inter, system-ui, sans-serif;
+            white-space: nowrap;
+            transform: translateY(-100%);
+            text-shadow: 0 0 4px #07111f;
+        }
+        .render-error { position: absolute; inset: 30%; color: #fb7185; }
 
         .hint, .legend {
             position: absolute;
@@ -206,6 +216,52 @@
 
         .scalar-row { display: grid; grid-template-columns: 1fr 48px; align-items: center; gap: 8px; }
 
+        .matrix-card {
+            padding: 13px;
+            margin-top: 10px;
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 7px;
+            margin: 10px 0;
+        }
+
+        .matrix-grid input {
+            min-width: 0;
+            width: 100%;
+            padding: 7px 4px;
+            color: var(--text);
+            background: #091827;
+            border: 1px solid #315170;
+            border-radius: 6px;
+            text-align: center;
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        }
+
+        .matrix-grid input:focus { outline: 1px solid var(--a); border-color: var(--a); }
+        .matrix-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+        .matrix-actions button { padding: 7px; font-size: 0.76rem; }
+
+        .module-tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 22px;
+            padding: 4px;
+            background: #081725;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        .module-tab { border-color: transparent; background: transparent; color: var(--muted); }
+        .module-tab.active { color: var(--text); background: #1a3856; border-color: #3b6388; }
+        [hidden] { display: none !important; }
+
         .explanation {
             color: #b6c7d8;
             font-size: 0.86rem;
@@ -244,11 +300,11 @@
     <div class="app">
         <header>
             <div class="brand">
-                <h1>Laboratório de Vetores 3D</h1>
-                <p>Operações vetoriais e visualização espacial — sem matrizes</p>
+                <h1>Laboratório de Vetores e Matrizes 3D</h1>
+                <p>Operações vetoriais, transformações matriciais e visualização espacial</p>
             </div>
             <div class="header-actions">
-                <button id="reset-vectors" type="button">Restaurar vetores</button>
+                <button id="reset-vectors" type="button">Restaurar valores</button>
                 <button id="reset-camera" type="button">Resetar câmera</button>
             </div>
         </header>
@@ -256,63 +312,124 @@
         <main>
             <section class="viewport" id="viewport" aria-label="Visualização tridimensional dos vetores">
                 <canvas id="canvas"></canvas>
+                <div class="scene-labels" id="scene-labels" aria-hidden="true"></div>
+                <div class="render-error" id="render-error" role="alert" hidden></div>
                 <div class="legend" id="legend"></div>
                 <div class="hint">Arraste para girar · Scroll para aproximar</div>
             </section>
 
             <aside>
-                <div class="section">
-                    <h2 class="section-title">Operação</h2>
-                    <select id="operation">
-                        <option value="view">Visualização livre</option>
-                        <option value="add">Soma: a + b</option>
-                        <option value="sub">Subtração: a − b</option>
-                        <option value="scalar">Multiplicação escalar: c · a</option>
-                        <option value="norm">Módulo e normalização</option>
-                        <option value="dot">Produto escalar e ângulo</option>
-                        <option value="cross">Produto vetorial: a × b</option>
-                    </select>
+                <div class="module-tabs" role="tablist" aria-label="Módulo do laboratório">
+                    <button class="module-tab active" id="vectors-tab" type="button" role="tab" aria-selected="true" data-module="vectors">Vetores</button>
+                    <button class="module-tab" id="matrices-tab" type="button" role="tab" aria-selected="false" data-module="matrices">Matrizes</button>
                 </div>
 
-                <div class="section">
-                    <h2 class="section-title">Componentes</h2>
-                    <div class="vector-card vector-a">
-                        <div class="vector-heading">
-                            <span style="color: var(--a)">Vetor a</span>
-                            <span class="magnitude" id="mag-a"></span>
-                        </div>
-                        <div class="component"><label for="ax">x</label><input id="ax" type="range" min="-5" max="5" step="0.1"><output id="ax-out"></output></div>
-                        <div class="component"><label for="ay">y</label><input id="ay" type="range" min="-5" max="5" step="0.1"><output id="ay-out"></output></div>
-                        <div class="component"><label for="az">z</label><input id="az" type="range" min="-5" max="5" step="0.1"><output id="az-out"></output></div>
+                <div id="vectors-panel" role="tabpanel" aria-labelledby="vectors-tab">
+                    <div class="section">
+                        <h2 class="section-title">Operação vetorial</h2>
+                        <select id="operation">
+                            <option value="view">Visualização livre</option>
+                            <option value="add">Soma: a + b</option>
+                            <option value="sub">Subtração: a − b</option>
+                            <option value="scalar">Multiplicação escalar: c · a</option>
+                            <option value="norm">Módulo e normalização</option>
+                            <option value="dot">Produto escalar e ângulo</option>
+                            <option value="cross">Produto vetorial: a × b</option>
+                        </select>
                     </div>
 
-                    <div class="vector-card vector-b" id="vector-b-card">
-                        <div class="vector-heading">
-                            <span style="color: var(--b)">Vetor b</span>
-                            <span class="magnitude" id="mag-b"></span>
+                    <div class="section">
+                        <h2 class="section-title">Componentes</h2>
+                        <div class="vector-card vector-a">
+                            <div class="vector-heading">
+                                <span style="color: var(--a)">Vetor a</span>
+                                <span class="magnitude" id="mag-a"></span>
+                            </div>
+                            <div class="component"><label for="ax">x</label><input id="ax" type="range" min="-5" max="5" step="0.1"><output id="ax-out"></output></div>
+                            <div class="component"><label for="ay">y</label><input id="ay" type="range" min="-5" max="5" step="0.1"><output id="ay-out"></output></div>
+                            <div class="component"><label for="az">z</label><input id="az" type="range" min="-5" max="5" step="0.1"><output id="az-out"></output></div>
                         </div>
-                        <div class="component"><label for="bx">x</label><input id="bx" type="range" min="-5" max="5" step="0.1"><output id="bx-out"></output></div>
-                        <div class="component"><label for="by">y</label><input id="by" type="range" min="-5" max="5" step="0.1"><output id="by-out"></output></div>
-                        <div class="component"><label for="bz">z</label><input id="bz" type="range" min="-5" max="5" step="0.1"><output id="bz-out"></output></div>
+
+                        <div class="vector-card vector-b" id="vector-b-card">
+                            <div class="vector-heading">
+                                <span style="color: var(--b)">Vetor b</span>
+                                <span class="magnitude" id="mag-b"></span>
+                            </div>
+                            <div class="component"><label for="bx">x</label><input id="bx" type="range" min="-5" max="5" step="0.1"><output id="bx-out"></output></div>
+                            <div class="component"><label for="by">y</label><input id="by" type="range" min="-5" max="5" step="0.1"><output id="by-out"></output></div>
+                            <div class="component"><label for="bz">z</label><input id="bz" type="range" min="-5" max="5" step="0.1"><output id="bz-out"></output></div>
+                        </div>
+
+                        <div class="scalar" id="scalar-control" hidden>
+                            <div class="scalar-row">
+                                <input id="scalar" type="range" min="-3" max="3" value="1.5" step="0.1">
+                                <output id="scalar-out">1.5</output>
+                            </div>
+                            <div class="note">Constante escalar c</div>
+                        </div>
                     </div>
 
-                    <div class="scalar" id="scalar-control" hidden>
-                        <div class="scalar-row">
-                            <input id="scalar" type="range" min="-3" max="3" value="1.5" step="0.1">
-                            <output id="scalar-out">1.5</output>
-                        </div>
-                        <div class="note">Constante escalar c</div>
+                    <div class="section">
+                        <h2 class="section-title">Interpretação</h2>
+                        <div class="explanation" id="explanation"></div>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-title">Cálculo</h2>
+                        <div class="math-box" id="math"></div>
                     </div>
                 </div>
 
-                <div class="section">
-                    <h2 class="section-title">Interpretação</h2>
-                    <div class="explanation" id="explanation"></div>
-                </div>
+                <div id="matrices-panel" role="tabpanel" aria-labelledby="matrices-tab" hidden>
+                    <div class="section">
+                        <h2 class="section-title">Operação matricial</h2>
+                        <select id="matrix-operation">
+                            <option value="transform">Transformar vetor: A · v</option>
+                            <option value="add">Soma: A + B</option>
+                            <option value="sub">Subtração: A − B</option>
+                            <option value="multiply">Produto: A × B</option>
+                            <option value="transpose">Transposta: Aᵀ</option>
+                            <option value="determinant">Determinante: det(A)</option>
+                        </select>
+                    </div>
 
-                <div class="section">
-                    <h2 class="section-title">Cálculo</h2>
-                    <div class="math-box" id="math"></div>
+                    <div class="section">
+                        <h2 class="section-title">Matrizes 3 × 3</h2>
+                        <div class="matrix-card">
+                            <div class="vector-heading"><span style="color: var(--aux)">Matriz A</span><span class="magnitude">3 × 3</span></div>
+                            <div class="matrix-grid" id="matrix-a-grid" aria-label="Elementos da matriz A"></div>
+                            <div class="matrix-actions">
+                                <button type="button" data-matrix-preset="identity">Identidade</button>
+                                <button type="button" data-matrix-preset="scale">Escala 1,5×</button>
+                                <button type="button" data-matrix-preset="rotate-z">Girar 45° em Z</button>
+                                <button type="button" data-matrix-preset="shear">Cisalhar X</button>
+                            </div>
+                        </div>
+
+                        <div class="matrix-card" id="matrix-b-card" hidden>
+                            <div class="vector-heading"><span style="color: var(--b)">Matriz B</span><span class="magnitude">3 × 3</span></div>
+                            <div class="matrix-grid" id="matrix-b-grid" aria-label="Elementos da matriz B"></div>
+                        </div>
+                    </div>
+
+                    <div class="section" id="matrix-vector-card">
+                        <h2 class="section-title">Vetor v</h2>
+                        <div class="vector-card vector-a">
+                            <div class="component"><label for="vx">x</label><input id="vx" type="range" min="-5" max="5" step="0.1"><output id="vx-out"></output></div>
+                            <div class="component"><label for="vy">y</label><input id="vy" type="range" min="-5" max="5" step="0.1"><output id="vy-out"></output></div>
+                            <div class="component"><label for="vz">z</label><input id="vz" type="range" min="-5" max="5" step="0.1"><output id="vz-out"></output></div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-title">Interpretação</h2>
+                        <div class="explanation" id="matrix-explanation"></div>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-title">Cálculo e resultado</h2>
+                        <div class="math-box" id="matrix-math"></div>
+                    </div>
                 </div>
             </aside>
         </main>
@@ -323,19 +440,130 @@
 
         const canvas = document.getElementById('canvas');
         const viewport = document.getElementById('viewport');
-        const ctx = canvas.getContext('2d');
+        // WebGL nativo: toda a geometria é rasterizada pela GPU com shaders.
+        const gl = canvas.getContext('webgl', { alpha: true, antialias: true });
+        const labels = document.getElementById('scene-labels');
+        const renderError = document.getElementById('render-error');
+        let program;
+        let vertexBuffer;
+        let positionLocation;
+        let colorLocation;
+        let resolutionLocation;
+        let vertices = [];
+        let labelIndex = 0;
+
+        function initializeWebGL() {
+            if (!gl) throw new Error('WebGL não está disponível neste navegador.');
+            function compile(type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                    const message = gl.getShaderInfoLog(shader);
+                    gl.deleteShader(shader);
+                    throw new Error(message);
+                }
+                return shader;
+            }
+            const vertexShader = compile(gl.VERTEX_SHADER, `
+                attribute vec2 a_position;
+                attribute vec4 a_color;
+                uniform vec2 u_resolution;
+                varying vec4 v_color;
+                void main() {
+                    vec2 clip = a_position / u_resolution * 2.0 - 1.0;
+                    gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+                    v_color = a_color;
+                }
+            `);
+            const fragmentShader = compile(gl.FRAGMENT_SHADER, `
+                precision mediump float;
+                varying vec4 v_color;
+                void main() { gl_FragColor = v_color; }
+            `);
+            program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            gl.deleteShader(vertexShader);
+            gl.deleteShader(fragmentShader);
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                throw new Error(gl.getProgramInfoLog(program));
+            }
+            vertexBuffer = gl.createBuffer();
+            positionLocation = gl.getAttribLocation(program, 'a_position');
+            colorLocation = gl.getAttribLocation(program, 'a_color');
+            resolutionLocation = gl.getUniformLocation(program, 'u_resolution');
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            gl.clearColor(0, 0, 0, 0);
+            renderError.hidden = true;
+        }
+
+        function showRenderError(error) {
+            renderError.textContent = `Não foi possível iniciar a visualização WebGL: ${error.message}`;
+            renderError.hidden = false;
+        }
+
+        try { initializeWebGL(); } catch (error) { showRenderError(error); }
+
+        function rgba(hex, alpha = 1) {
+            return [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).concat(alpha);
+        }
+
+        function triangle(a, b, c, color) {
+            for (const p of [a, b, c]) vertices.push(p.x, p.y, ...color);
+        }
+
+        // Triângulos evitam a limitação de espessura de gl.lineWidth nos navegadores.
+        function screenLine(a, b, color, width, dashed = false) {
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const length = Math.hypot(dx, dy);
+            if (length < 1e-9) return;
+            const nx = -dy / length * width / 2;
+            const ny = dx / length * width / 2;
+            const step = dashed ? 12 : length;
+            for (let start = 0; start < length; start += step) {
+                const end = Math.min(length, start + (dashed ? 6 : length));
+                const p = { x: a.x + dx * start / length, y: a.y + dy * start / length };
+                const q = { x: a.x + dx * end / length, y: a.y + dy * end / length };
+                const p1 = { x: p.x + nx, y: p.y + ny };
+                const p2 = { x: p.x - nx, y: p.y - ny };
+                const q1 = { x: q.x + nx, y: q.y + ny };
+                const q2 = { x: q.x - nx, y: q.y - ny };
+                triangle(p1, p2, q1, color);
+                triangle(p2, q2, q1, color);
+            }
+        }
 
         const defaults = {
             a: { x: 3, y: 2, z: 1 },
             b: { x: -1, y: 3, z: 2 },
-            scalar: 1.5
+            scalar: 1.5,
+            matrix: [
+                [1, 0, 0],
+                [0, 1, 0],
+                [0, 0, 1]
+            ],
+            matrixB: [
+                [1, 0.5, 0],
+                [0, 1, 0],
+                [0, 0, 1]
+            ],
+            matrixVector: { x: 3, y: 2, z: 1 }
         };
 
         const state = {
             a: { ...defaults.a },
             b: { ...defaults.b },
             scalar: defaults.scalar,
+            matrix: defaults.matrix.map(row => [...row]),
+            matrixB: defaults.matrixB.map(row => [...row]),
+            matrixVector: { ...defaults.matrixVector },
             operation: 'view',
+            matrixOperation: 'transform',
+            module: 'vectors',
             camera: { yaw: -0.72, pitch: 0.48, zoom: 1 },
             dragging: false,
             lastX: 0,
@@ -359,6 +587,32 @@
             }
         };
 
+        const M = {
+            add: (a, b) => a.map((row, i) => row.map((value, j) => value + b[i][j])),
+            sub: (a, b) => a.map((row, i) => row.map((value, j) => value - b[i][j])),
+            multiply: (a, b) => a.map((row, i) => row.map((_, j) =>
+                row.reduce((sum, value, k) => sum + value * b[k][j], 0)
+            )),
+            transpose: matrix => matrix[0].map((_, column) => matrix.map(row => row[column])),
+            transform: (matrix, vector) => ({
+                x: matrix[0][0] * vector.x + matrix[0][1] * vector.y + matrix[0][2] * vector.z,
+                y: matrix[1][0] * vector.x + matrix[1][1] * vector.y + matrix[1][2] * vector.z,
+                z: matrix[2][0] * vector.x + matrix[2][1] * vector.y + matrix[2][2] * vector.z
+            }),
+            determinant: matrix =>
+                matrix[0][0] * (matrix[1][1] * matrix[2][2] - matrix[1][2] * matrix[2][1])
+                - matrix[0][1] * (matrix[1][0] * matrix[2][2] - matrix[1][2] * matrix[2][0])
+                + matrix[0][2] * (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0])
+        };
+
+        function matrixResult() {
+            if (state.matrixOperation === 'add') return M.add(state.matrix, state.matrixB);
+            if (state.matrixOperation === 'sub') return M.sub(state.matrix, state.matrixB);
+            if (state.matrixOperation === 'multiply') return M.multiply(state.matrix, state.matrixB);
+            if (state.matrixOperation === 'transpose') return M.transpose(state.matrix);
+            return state.matrix;
+        }
+
         const origin = { x: 0, y: 0, z: 0 };
 
         function fmt(n, decimals = 2) {
@@ -370,7 +624,19 @@
             return `(${fmt(v.x, decimals)}, ${fmt(v.y, decimals)}, ${fmt(v.z, decimals)})`;
         }
 
+        function matrixText(matrix) {
+            return matrix.map(row => `[ ${row.map(value => fmt(value)).join('&nbsp; ')} ]`).join('<br>');
+        }
+
         function sceneExtent() {
+            if (state.module === 'matrices') {
+                const matrix = matrixResult();
+                const vectors = [state.matrixVector, M.transform(matrix, state.matrixVector)];
+                for (const x of [-2, 2]) for (const y of [-2, 2]) for (const z of [-2, 2]) {
+                    vectors.push(M.transform(matrix, { x, y, z }));
+                }
+                return Math.max(7, ...vectors.flatMap(v => [Math.abs(v.x), Math.abs(v.y), Math.abs(v.z)])) + 0.5;
+            }
             const vectors = [state.a, state.b];
             if (state.operation === 'add') vectors.push(V.add(state.a, state.b));
             if (state.operation === 'sub') vectors.push(V.sub(state.a, state.b), V.scale(state.b, -1));
@@ -379,7 +645,7 @@
             return Math.max(7, ...vectors.flatMap(v => [Math.abs(v.x), Math.abs(v.y), Math.abs(v.z)])) + 0.5;
         }
 
-        // A câmera orbital usa diretamente trigonometria. Não há matrizes neste laboratório.
+        // A câmera orbital projeta os pontos que depois são rasterizados pelo WebGL.
         function project(p) {
             const { yaw, pitch, zoom } = state.camera;
             const cy = Math.cos(yaw);
@@ -401,29 +667,22 @@
         }
 
         function line3D(from, to, color, width = 1.5, dashed = false, alpha = 1) {
-            const a = project(from);
-            const b = project(to);
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
-            ctx.strokeStyle = color;
-            ctx.lineWidth = width;
-            ctx.setLineDash(dashed ? [6, 6] : []);
-            ctx.stroke();
-            ctx.restore();
+            screenLine(project(from), project(to), rgba(color, alpha), width, dashed);
         }
 
+        // Apenas os rótulos são HTML; grade, eixos, vetores e cubos usam WebGL.
         function label3D(p, text, color, offsetX = 8, offsetY = -8) {
             const s = project(p);
-            ctx.save();
-            ctx.font = '600 13px Inter, system-ui, sans-serif';
-            ctx.fillStyle = color;
-            ctx.shadowColor = '#07111f';
-            ctx.shadowBlur = 4;
-            ctx.fillText(text, s.x + offsetX, s.y + offsetY);
-            ctx.restore();
+            let label = labels.children[labelIndex++];
+            if (!label) {
+                label = document.createElement('span');
+                label.className = 'scene-label';
+                labels.appendChild(label);
+            }
+            label.textContent = text;
+            label.style.color = color;
+            label.style.left = `${s.x + offsetX}px`;
+            label.style.top = `${s.y + offsetY}px`;
         }
 
         function arrow3D(from, to, color, label, width = 3) {
@@ -432,40 +691,32 @@
             const dx = b.x - a.x;
             const dy = b.y - a.y;
             const screenLength = Math.hypot(dx, dy);
-
-            ctx.save();
-            ctx.strokeStyle = color;
-            ctx.fillStyle = color;
-            ctx.lineWidth = width;
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
-            ctx.stroke();
-
+            const tint = rgba(color);
+            screenLine(a, b, tint, width);
             if (screenLength > 2) {
                 const angle = Math.atan2(dy, dx);
                 const head = Math.min(13, Math.max(8, screenLength * 0.18));
-                ctx.beginPath();
-                ctx.moveTo(b.x, b.y);
-                ctx.lineTo(b.x - head * Math.cos(angle - 0.48), b.y - head * Math.sin(angle - 0.48));
-                ctx.lineTo(b.x - head * Math.cos(angle + 0.48), b.y - head * Math.sin(angle + 0.48));
-                ctx.closePath();
-                ctx.fill();
+                triangle(b,
+                    { x: b.x - head * Math.cos(angle - 0.48), y: b.y - head * Math.sin(angle - 0.48) },
+                    { x: b.x - head * Math.cos(angle + 0.48), y: b.y - head * Math.sin(angle + 0.48) },
+                    tint);
+            } else {
+                point3D(to, color, width / 2);
             }
-            ctx.restore();
-
             if (label) label3D(to, label, color);
         }
 
         function point3D(p, color, radius = 4) {
             const s = project(p);
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(s.x, s.y, radius, 0, Math.PI * 2);
-            ctx.fillStyle = color;
-            ctx.fill();
-            ctx.restore();
+            const tint = rgba(color);
+            for (let i = 0; i < 24; i++) {
+                const t1 = i * Math.PI * 2 / 24;
+                const t2 = (i + 1) * Math.PI * 2 / 24;
+                triangle(s,
+                    { x: s.x + Math.cos(t1) * radius, y: s.y + Math.sin(t1) * radius },
+                    { x: s.x + Math.cos(t2) * radius, y: s.y + Math.sin(t2) * radius },
+                    tint);
+            }
         }
 
         function drawGrid() {
@@ -499,11 +750,34 @@
             });
         }
 
+        function drawCube(transform, color, dashed, alpha) {
+            const points = [];
+            for (const x of [-2, 2]) for (const y of [-2, 2]) for (const z of [-2, 2]) {
+                points.push(transform({ x, y, z }));
+            }
+            for (let i = 0; i < points.length; i++) {
+                for (let j = i + 1; j < points.length; j++) {
+                    const bits = i ^ j;
+                    if (bits === 1 || bits === 2 || bits === 4) {
+                        line3D(points[i], points[j], color, 1.5, dashed, alpha);
+                    }
+                }
+            }
+        }
+
+        function drawMatrixTransformation(matrix, label = 'R') {
+            drawCube(point => point, '#7c8fa3', true, 0.45);
+            drawCube(point => M.transform(matrix, point), '#a78bfa', false, 0.85);
+            arrow3D(origin, M.transform(matrix, { x: 1, y: 0, z: 0 }), '#f87171', `${label}·eₓ`, 2.5);
+            arrow3D(origin, M.transform(matrix, { x: 0, y: 1, z: 0 }), '#4ade80', `${label}·eᵧ`, 2.5);
+            arrow3D(origin, M.transform(matrix, { x: 0, y: 0, z: 1 }), '#60a5fa', `${label}·eᶻ`, 2.5);
+        }
+
         function renderVectors() {
             const { a, b, operation, scalar } = state;
             arrow3D(origin, a, '#38bdf8', 'a');
 
-            if (operation !== 'scalar' && operation !== 'norm') {
+            if (!['scalar', 'norm'].includes(operation)) {
                 arrow3D(origin, b, '#fb7185', 'b');
             }
 
@@ -542,12 +816,39 @@
             }
         }
 
+        function renderMatrices() {
+            const resultMatrix = matrixResult();
+            const label = ['add', 'sub', 'multiply'].includes(state.matrixOperation) ? 'R' : 'A';
+            drawMatrixTransformation(resultMatrix, label);
+            if (state.matrixOperation === 'transform') {
+                const result = M.transform(state.matrix, state.matrixVector);
+                arrow3D(origin, state.matrixVector, '#38bdf8', 'v', 3);
+                arrow3D(origin, result, '#facc15', 'A · v', 4);
+            }
+        }
+
         function render() {
+            if (!gl || !renderError.hidden || gl.isContextLost()) return;
             const width = canvas.clientWidth;
             const height = canvas.clientHeight;
-            ctx.clearRect(0, 0, width, height);
+            if (!width || !height) return;
+            vertices = [];
+            labelIndex = 0;
             drawGrid();
-            renderVectors();
+            if (state.module === 'matrices') renderMatrices();
+            else renderVectors();
+            while (labels.children.length > labelIndex) labels.lastChild.remove();
+            gl.viewport(0, 0, canvas.width, canvas.height);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.useProgram(program);
+            gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
+            gl.enableVertexAttribArray(positionLocation);
+            gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 24, 0);
+            gl.enableVertexAttribArray(colorLocation);
+            gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 24, 8);
+            gl.uniform2f(resolutionLocation, width, height);
+            gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 6);
         }
 
         function resize() {
@@ -557,7 +858,6 @@
             canvas.height = Math.round(rect.height * ratio);
             canvas.style.width = `${rect.width}px`;
             canvas.style.height = `${rect.height}px`;
-            ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
             render();
         }
 
@@ -573,7 +873,7 @@
             document.getElementById('mag-b').textContent = `|b| = ${fmt(lenB)}`;
 
             let html = '<span><i class="dot" style="background:#38bdf8"></i>a</span>';
-            if (operation !== 'scalar' && operation !== 'norm') html += '<span><i class="dot" style="background:#fb7185"></i>b</span>';
+            if (!['scalar', 'norm'].includes(operation)) html += '<span><i class="dot" style="background:#fb7185"></i>b</span>';
             if (operation !== 'view') html += '<span><i class="dot" style="background:#facc15"></i>resultado</span>';
             legend.innerHTML = html;
 
@@ -614,6 +914,40 @@
             }
         }
 
+        function updateMatrixInformation() {
+            const operation = state.matrixOperation;
+            const result = matrixResult();
+            const determinant = M.determinant(result);
+            const explanation = document.getElementById('matrix-explanation');
+            const math = document.getElementById('matrix-math');
+            const legend = document.getElementById('legend');
+            legend.innerHTML = operation === 'transform'
+                ? '<span><i class="dot" style="background:#38bdf8"></i>v</span><span><i class="dot" style="background:#a78bfa"></i>espaço transformado</span><span><i class="dot" style="background:#facc15"></i>A · v</span>'
+                : '<span><i class="dot" style="background:#7c8fa3"></i>cubo original</span><span><i class="dot" style="background:#a78bfa"></i>efeito do resultado</span>';
+
+            if (operation === 'transform') {
+                const vectorResult = M.transform(state.matrix, state.matrixVector);
+                explanation.innerHTML = 'A matriz A atua como uma <strong>transformação linear</strong>. Cada componente do resultado combina uma linha da matriz com o vetor v.';
+                math.innerHTML = `A =<br>${matrixText(state.matrix)}<br><br>v = ${vectorText(state.matrixVector)}<br>A · v = <span class="result">${vectorText(vectorResult)}</span><br><br>det(A) = ${fmt(M.determinant(state.matrix))}`;
+            } else if (operation === 'add' || operation === 'sub') {
+                const symbol = operation === 'add' ? '+' : '−';
+                explanation.innerHTML = `A ${operation === 'add' ? 'soma' : 'subtração'} de matrizes é feita <strong>elemento por elemento</strong>. O cubo roxo mostra o efeito da matriz resultante R.`;
+                math.innerHTML = `A =<br>${matrixText(state.matrix)}<br><br>B =<br>${matrixText(state.matrixB)}<br><br>R = A ${symbol} B =<br><span class="result">${matrixText(result)}</span><br><br>det(R) = ${fmt(determinant)}`;
+            } else if (operation === 'multiply') {
+                explanation.innerHTML = 'No produto A × B, cada elemento resulta do produto escalar entre uma <strong>linha de A e uma coluna de B</strong>. A ordem importa: em geral, A × B ≠ B × A.';
+                math.innerHTML = `A =<br>${matrixText(state.matrix)}<br><br>B =<br>${matrixText(state.matrixB)}<br><br>R = A × B =<br><span class="result">${matrixText(result)}</span><br><br>det(R) = ${fmt(determinant)}`;
+            } else if (operation === 'transpose') {
+                explanation.innerHTML = 'A transposta troca <strong>linhas por colunas</strong>. O elemento da linha i e coluna j passa para a linha j e coluna i.';
+                math.innerHTML = `A =<br>${matrixText(state.matrix)}<br><br>Aᵀ =<br><span class="result">${matrixText(result)}</span><br><br>det(Aᵀ) = ${fmt(determinant)}`;
+            } else {
+                const meaning = Math.abs(determinant) < 0.0005
+                    ? 'A matriz não é invertível e achata o espaço.'
+                    : `A transformação multiplica volumes por <strong>${fmt(Math.abs(determinant))}</strong>${determinant < 0 ? ' e inverte a orientação' : ''}.`;
+                explanation.innerHTML = `O determinante descreve a variação de volume provocada pela matriz. ${meaning}`;
+                math.innerHTML = `A =<br>${matrixText(state.matrix)}<br><br>det(A) = <span class="result">${fmt(determinant)}</span>`;
+            }
+        }
+
         function syncControls() {
             ['a', 'b'].forEach(name => {
                 ['x', 'y', 'z'].forEach(axis => {
@@ -625,9 +959,54 @@
             });
             document.getElementById('scalar').value = state.scalar;
             document.getElementById('scalar-out').value = fmt(state.scalar, 1);
-            updateInformation();
+            state.matrix.forEach((row, rowIndex) => row.forEach((value, columnIndex) => {
+                document.getElementById(`ma${rowIndex}${columnIndex}`).value = fmt(value, 2);
+            }));
+            state.matrixB.forEach((row, rowIndex) => row.forEach((value, columnIndex) => {
+                document.getElementById(`mb${rowIndex}${columnIndex}`).value = fmt(value, 2);
+            }));
+            ['x', 'y', 'z'].forEach(axis => {
+                document.getElementById(`v${axis}`).value = state.matrixVector[axis];
+                document.getElementById(`v${axis}-out`).value = fmt(state.matrixVector[axis], 1);
+            });
+            if (state.module === 'matrices') updateMatrixInformation();
+            else updateInformation();
             render();
         }
+
+        function createMatrixInputs(containerId, stateKey, prefix, matrixName) {
+            const grid = document.getElementById(containerId);
+            for (let row = 0; row < 3; row++) {
+                for (let column = 0; column < 3; column++) {
+                    const input = document.createElement('input');
+                    input.id = `${prefix}${row}${column}`;
+                    input.type = 'number';
+                    input.step = '0.1';
+                    input.value = state[stateKey][row][column];
+                    input.setAttribute('aria-label', `${matrixName} linha ${row + 1}, coluna ${column + 1}`);
+                    input.addEventListener('input', event => {
+                        const value = Number(event.target.value);
+                        if (!Number.isFinite(value)) return;
+                        state[stateKey][row][column] = value;
+                        updateMatrixInformation();
+                        render();
+                    });
+                    grid.appendChild(input);
+                }
+            }
+        }
+
+        createMatrixInputs('matrix-a-grid', 'matrix', 'ma', 'Matriz A');
+        createMatrixInputs('matrix-b-grid', 'matrixB', 'mb', 'Matriz B');
+
+        ['x', 'y', 'z'].forEach(axis => {
+            document.getElementById(`v${axis}`).addEventListener('input', event => {
+                state.matrixVector[axis] = Number(event.target.value);
+                document.getElementById(`v${axis}-out`).value = fmt(state.matrixVector[axis], 1);
+                updateMatrixInformation();
+                render();
+            });
+        });
 
         ['a', 'b'].forEach(name => {
             ['x', 'y', 'z'].forEach(axis => {
@@ -650,6 +1029,48 @@
             render();
         });
 
+        document.getElementById('matrix-operation').addEventListener('change', event => {
+            state.matrixOperation = event.target.value;
+            const needsB = ['add', 'sub', 'multiply'].includes(state.matrixOperation);
+            document.getElementById('matrix-b-card').hidden = !needsB;
+            document.getElementById('matrix-vector-card').hidden = state.matrixOperation !== 'transform';
+            updateMatrixInformation();
+            render();
+        });
+
+        document.querySelectorAll('[data-module]').forEach(tab => {
+            tab.addEventListener('click', () => {
+                state.module = tab.dataset.module;
+                document.querySelectorAll('[data-module]').forEach(button => {
+                    const active = button === tab;
+                    button.classList.toggle('active', active);
+                    button.setAttribute('aria-selected', active);
+                });
+                document.getElementById('vectors-panel').hidden = state.module !== 'vectors';
+                document.getElementById('matrices-panel').hidden = state.module !== 'matrices';
+                if (state.module === 'matrices') updateMatrixInformation();
+                else updateInformation();
+                render();
+            });
+        });
+
+        const matrixPresets = {
+            identity: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+            scale: [[1.5, 0, 0], [0, 1.5, 0], [0, 0, 1.5]],
+            'rotate-z': (() => {
+                const angle = Math.PI / 4;
+                return [[Math.cos(angle), -Math.sin(angle), 0], [Math.sin(angle), Math.cos(angle), 0], [0, 0, 1]];
+            })(),
+            shear: [[1, 0.75, 0], [0, 1, 0], [0, 0, 1]]
+        };
+
+        document.querySelectorAll('[data-matrix-preset]').forEach(button => {
+            button.addEventListener('click', () => {
+                state.matrix = matrixPresets[button.dataset.matrixPreset].map(row => [...row]);
+                syncControls();
+            });
+        });
+
         document.getElementById('scalar').addEventListener('input', event => {
             state.scalar = Number(event.target.value);
             document.getElementById('scalar-out').value = fmt(state.scalar, 1);
@@ -661,6 +1082,9 @@
             state.a = { ...defaults.a };
             state.b = { ...defaults.b };
             state.scalar = defaults.scalar;
+            state.matrix = defaults.matrix.map(row => [...row]);
+            state.matrixB = defaults.matrixB.map(row => [...row]);
+            state.matrixVector = { ...defaults.matrixVector };
             syncControls();
         });
 
@@ -705,8 +1129,19 @@
             render();
         }, { passive: false });
 
+        canvas.addEventListener('webglcontextlost', event => {
+            event.preventDefault();
+            showRenderError(new Error('O contexto gráfico foi perdido. Aguardando restauração.'));
+        });
+        canvas.addEventListener('webglcontextrestored', () => {
+            try { initializeWebGL(); resize(); } catch (error) { showRenderError(error); }
+        });
+        new ResizeObserver(resize).observe(viewport);
         window.addEventListener('resize', resize);
 
+        if (window.location.hash === '#matrizes') {
+            document.getElementById('matrices-tab').click();
+        }
         syncControls();
         resize();
     </script>
