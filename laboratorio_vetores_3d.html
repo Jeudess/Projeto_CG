@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laboratório de Vetores e Matrizes 3D</title>
+    <title>Laboratório de Computação Gráfica 3D</title>
     <style>
         :root {
             --bg: #07111f;
@@ -249,7 +249,7 @@
 
         .module-tabs {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(3, 1fr);
             gap: 6px;
             margin-bottom: 22px;
             padding: 4px;
@@ -286,6 +286,34 @@
         .result { color: var(--result); font-weight: 750; }
         .note { color: var(--muted); font-size: 0.74rem; margin-top: 8px; }
 
+        .transform-toolbar { display: grid; grid-template-columns: 1fr auto; gap: 7px; }
+        .transform-toolbar button { white-space: nowrap; }
+        .transform-list { display: grid; gap: 9px; margin-top: 10px; }
+        .transform-item {
+            padding: 11px;
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+        }
+        .transform-item.disabled { opacity: 0.55; }
+        .transform-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .transform-heading label { display: inline-flex; align-items: center; gap: 7px; font-size: 0.8rem; font-weight: 700; }
+        .transform-actions { display: flex; gap: 4px; }
+        .transform-actions button { padding: 4px 7px; font-size: 0.72rem; }
+        .transform-values { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 9px; }
+        .transform-values label { color: var(--muted); font-size: 0.68rem; font-weight: 700; }
+        .transform-values input {
+            width: 100%;
+            margin-top: 3px;
+            padding: 6px 4px;
+            color: var(--text);
+            background: #091827;
+            border: 1px solid #315170;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .empty-state { padding: 13px; color: var(--muted); text-align: center; font-size: 0.78rem; border: 1px dashed var(--border); border-radius: 9px; }
+
         @media (max-width: 850px) {
             body { overflow: auto; }
             .app { min-height: 100%; height: auto; }
@@ -300,8 +328,8 @@
     <div class="app">
         <header>
             <div class="brand">
-                <h1>Laboratório de Vetores e Matrizes 3D</h1>
-                <p>Operações vetoriais, transformações matriciais e visualização espacial</p>
+                <h1>Laboratório de Computação Gráfica 3D</h1>
+                <p>Vetores, matrizes, composição de transformações e visualização WebGL</p>
             </div>
             <div class="header-actions">
                 <button id="reset-vectors" type="button">Restaurar valores</button>
@@ -310,7 +338,7 @@
         </header>
 
         <main>
-            <section class="viewport" id="viewport" aria-label="Visualização tridimensional dos vetores">
+            <section class="viewport" id="viewport" aria-label="Visualização tridimensional interativa em WebGL">
                 <canvas id="canvas"></canvas>
                 <div class="scene-labels" id="scene-labels" aria-hidden="true"></div>
                 <div class="render-error" id="render-error" role="alert" hidden></div>
@@ -322,6 +350,7 @@
                 <div class="module-tabs" role="tablist" aria-label="Módulo do laboratório">
                     <button class="module-tab active" id="vectors-tab" type="button" role="tab" aria-selected="true" data-module="vectors">Vetores</button>
                     <button class="module-tab" id="matrices-tab" type="button" role="tab" aria-selected="false" data-module="matrices">Matrizes</button>
+                    <button class="module-tab" id="transforms-tab" type="button" role="tab" aria-selected="false" data-module="transforms">Transformações</button>
                 </div>
 
                 <div id="vectors-panel" role="tabpanel" aria-labelledby="vectors-tab">
@@ -429,6 +458,45 @@
                     <div class="section">
                         <h2 class="section-title">Cálculo e resultado</h2>
                         <div class="math-box" id="matrix-math"></div>
+                    </div>
+                </div>
+
+                <div id="transforms-panel" role="tabpanel" aria-labelledby="transforms-tab" hidden>
+                    <div class="section">
+                        <h2 class="section-title">Ponto de referência</h2>
+                        <div class="vector-card vector-a">
+                            <div class="component"><label for="px">x</label><input id="px" type="range" min="-5" max="5" step="0.1"><output id="px-out"></output></div>
+                            <div class="component"><label for="py">y</label><input id="py" type="range" min="-5" max="5" step="0.1"><output id="py-out"></output></div>
+                            <div class="component"><label for="pz">z</label><input id="pz" type="range" min="-5" max="5" step="0.1"><output id="pz-out"></output></div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-title">Sequência de transformações</h2>
+                        <div class="transform-toolbar">
+                            <select id="transform-type" aria-label="Tipo de transformação">
+                                <option value="translate">Translação</option>
+                                <option value="rotate">Rotação</option>
+                                <option value="scale">Escala</option>
+                            </select>
+                            <button id="add-transform" type="button">Adicionar</button>
+                        </div>
+                        <div class="transform-list" id="transform-list"></div>
+                        <div class="matrix-actions" style="margin-top:9px">
+                            <button id="example-transforms" type="button">Carregar exemplo</button>
+                            <button id="clear-transforms" type="button">Limpar sequência</button>
+                        </div>
+                        <div class="note">As operações são aplicadas de cima para baixo. A ordem altera o resultado.</div>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-title">Interpretação</h2>
+                        <div class="explanation" id="transform-explanation"></div>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-title">Matriz de composição 4 × 4</h2>
+                        <div class="math-box" id="transform-math"></div>
                     </div>
                 </div>
             </aside>
@@ -551,8 +619,20 @@
                 [0, 1, 0],
                 [0, 0, 1]
             ],
-            matrixVector: { x: 3, y: 2, z: 1 }
+            matrixVector: { x: 3, y: 2, z: 1 },
+            transformPoint: { x: 1, y: 1, z: 1 },
+            transformations: [
+                { id: 1, type: 'scale', enabled: true, values: { x: 1.4, y: 1.1, z: 0.8 } },
+                { id: 2, type: 'rotate', enabled: true, values: { x: 0, y: 0, z: 35 } },
+                { id: 3, type: 'translate', enabled: true, values: { x: 2, y: 1, z: -1 } }
+            ]
         };
+
+        const cloneTransformations = source => source.map(item => ({
+            ...item,
+            values: { ...item.values }
+        }));
+        let nextTransformationId = 4;
 
         const state = {
             a: { ...defaults.a },
@@ -561,6 +641,8 @@
             matrix: defaults.matrix.map(row => [...row]),
             matrixB: defaults.matrixB.map(row => [...row]),
             matrixVector: { ...defaults.matrixVector },
+            transformPoint: { ...defaults.transformPoint },
+            transformations: cloneTransformations(defaults.transformations),
             operation: 'view',
             matrixOperation: 'transform',
             module: 'vectors',
@@ -605,6 +687,70 @@
                 + matrix[0][2] * (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0])
         };
 
+        // Matrizes homogêneas 4 × 4 em ordem de linhas. A sequência usa vetores-coluna:
+        // cada nova transformação multiplica a composição pela esquerda.
+        const M4 = {
+            identity: () => [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, 1, 0],
+                [0, 0, 0, 1]
+            ],
+            multiply: (a, b) => a.map((row, i) => row.map((_, j) =>
+                row.reduce((sum, value, k) => sum + value * b[k][j], 0)
+            )),
+            translation: (x, y, z) => [
+                [1, 0, 0, x],
+                [0, 1, 0, y],
+                [0, 0, 1, z],
+                [0, 0, 0, 1]
+            ],
+            scale: (x, y, z) => [
+                [x, 0, 0, 0],
+                [0, y, 0, 0],
+                [0, 0, z, 0],
+                [0, 0, 0, 1]
+            ],
+            rotationX: degrees => {
+                const angle = degrees * Math.PI / 180;
+                const c = Math.cos(angle), s = Math.sin(angle);
+                return [[1, 0, 0, 0], [0, c, -s, 0], [0, s, c, 0], [0, 0, 0, 1]];
+            },
+            rotationY: degrees => {
+                const angle = degrees * Math.PI / 180;
+                const c = Math.cos(angle), s = Math.sin(angle);
+                return [[c, 0, s, 0], [0, 1, 0, 0], [-s, 0, c, 0], [0, 0, 0, 1]];
+            },
+            rotationZ: degrees => {
+                const angle = degrees * Math.PI / 180;
+                const c = Math.cos(angle), s = Math.sin(angle);
+                return [[c, -s, 0, 0], [s, c, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
+            },
+            transform: (matrix, point) => {
+                const vector = [point.x, point.y, point.z, 1];
+                const result = matrix.map(row => row.reduce((sum, value, i) => sum + value * vector[i], 0));
+                const w = Math.abs(result[3]) < 1e-9 ? 1 : result[3];
+                return { x: result[0] / w, y: result[1] / w, z: result[2] / w };
+            }
+        };
+
+        function transformationMatrix(item) {
+            const { x, y, z } = item.values;
+            if (item.type === 'translate') return M4.translation(x, y, z);
+            if (item.type === 'scale') return M4.scale(x, y, z);
+            return M4.multiply(M4.rotationZ(z), M4.multiply(M4.rotationY(y), M4.rotationX(x)));
+        }
+
+        function compositionSteps() {
+            const steps = [];
+            let matrix = M4.identity();
+            state.transformations.filter(item => item.enabled).forEach(item => {
+                matrix = M4.multiply(transformationMatrix(item), matrix);
+                steps.push({ item, matrix });
+            });
+            return { matrix, steps };
+        }
+
         function matrixResult() {
             if (state.matrixOperation === 'add') return M.add(state.matrix, state.matrixB);
             if (state.matrixOperation === 'sub') return M.sub(state.matrix, state.matrixB);
@@ -629,6 +775,17 @@
         }
 
         function sceneExtent() {
+            if (state.module === 'transforms') {
+                const { matrix, steps } = compositionSteps();
+                const matrices = [M4.identity(), ...steps.map(step => step.matrix), matrix];
+                const vectors = [state.transformPoint, M4.transform(matrix, state.transformPoint)];
+                matrices.forEach(current => {
+                    for (const x of [-2, 2]) for (const y of [-2, 2]) for (const z of [-2, 2]) {
+                        vectors.push(M4.transform(current, { x, y, z }));
+                    }
+                });
+                return Math.max(7, ...vectors.flatMap(v => [Math.abs(v.x), Math.abs(v.y), Math.abs(v.z)])) + 0.5;
+            }
             if (state.module === 'matrices') {
                 const matrix = matrixResult();
                 const vectors = [state.matrixVector, M.transform(matrix, state.matrixVector)];
@@ -827,6 +984,27 @@
             }
         }
 
+        function renderTransformations() {
+            const { matrix, steps } = compositionSteps();
+            drawCube(point => point, '#7c8fa3', true, 0.5);
+
+            const intermediateColors = ['#22d3ee', '#c084fc', '#fb923c', '#34d399'];
+            steps.slice(0, -1).forEach((step, index) => {
+                drawCube(point => M4.transform(step.matrix, point), intermediateColors[index % intermediateColors.length], true, 0.38);
+            });
+            drawCube(point => M4.transform(matrix, point), '#a78bfa', false, 0.95);
+
+            const transformedPoint = M4.transform(matrix, state.transformPoint);
+            arrow3D(origin, state.transformPoint, '#38bdf8', 'p', 3);
+            arrow3D(origin, transformedPoint, '#facc15', "M·p", 4);
+
+            const transformedOrigin = M4.transform(matrix, origin);
+            arrow3D(transformedOrigin, M4.transform(matrix, { x: 1, y: 0, z: 0 }), '#f87171', 'X′', 2.5);
+            arrow3D(transformedOrigin, M4.transform(matrix, { x: 0, y: 1, z: 0 }), '#4ade80', 'Y′', 2.5);
+            arrow3D(transformedOrigin, M4.transform(matrix, { x: 0, y: 0, z: 1 }), '#60a5fa', 'Z′', 2.5);
+            point3D(transformedOrigin, '#a78bfa', 4);
+        }
+
         function render() {
             if (!gl || !renderError.hidden || gl.isContextLost()) return;
             const width = canvas.clientWidth;
@@ -836,6 +1014,7 @@
             labelIndex = 0;
             drawGrid();
             if (state.module === 'matrices') renderMatrices();
+            else if (state.module === 'transforms') renderTransformations();
             else renderVectors();
             while (labels.children.length > labelIndex) labels.lastChild.remove();
             gl.viewport(0, 0, canvas.width, canvas.height);
@@ -948,6 +1127,71 @@
             }
         }
 
+        const transformNames = { translate: 'Translação', rotate: 'Rotação', scale: 'Escala' };
+        const transformUnits = { translate: '', rotate: '°', scale: '×' };
+
+        function updateTransformationInformation() {
+            const { matrix } = compositionSteps();
+            const active = state.transformations.filter(item => item.enabled);
+            const transformedPoint = M4.transform(matrix, state.transformPoint);
+            const explanation = document.getElementById('transform-explanation');
+            const math = document.getElementById('transform-math');
+            const legend = document.getElementById('legend');
+            const hasZeroScale = active.some(item => item.type === 'scale' && Object.values(item.values).some(value => Math.abs(value) < 1e-9));
+            const hasNegativeScale = active.some(item => item.type === 'scale' && Object.values(item.values).some(value => value < 0));
+
+            legend.innerHTML = '<span><i class="dot" style="background:#7c8fa3"></i>original</span><span><i class="dot" style="background:#a78bfa"></i>transformado</span><span><i class="dot" style="background:#38bdf8"></i>p</span><span><i class="dot" style="background:#facc15"></i>M·p</span>';
+            if (!active.length) {
+                explanation.innerHTML = 'Sem operações ativas, a composição é a <strong>matriz identidade</strong> e o objeto permanece inalterado.';
+            } else {
+                const order = active.map(item => transformNames[item.type].toLowerCase()).join(' → ');
+                let warning = '';
+                if (hasZeroScale) warning += ' Uma escala zero achata o objeto em pelo menos um eixo.';
+                if (hasNegativeScale) warning += ' Uma escala negativa também inverte a orientação no respectivo eixo.';
+                explanation.innerHTML = `A sequência é aplicada de cima para baixo: <strong>${order}</strong>. A matriz final é obtida por multiplicações sucessivas pela esquerda.${warning}`;
+            }
+
+            const individual = active.map((item, index) =>
+                `${index + 1}. ${transformNames[item.type]} =<br>${matrixText(transformationMatrix(item))}`
+            ).join('<br><br>');
+            math.innerHTML = `${individual ? individual + '<br><br>' : ''}M final =<br><span class="result">${matrixText(matrix)}</span><br><br>p = ${vectorText(state.transformPoint)}<br>M · p = <span class="result">${vectorText(transformedPoint)}</span>`;
+        }
+
+        function renderTransformationList() {
+            const list = document.getElementById('transform-list');
+            list.innerHTML = '';
+            if (!state.transformations.length) {
+                list.innerHTML = '<div class="empty-state">Nenhuma transformação. A composição atual é a identidade.</div>';
+                return;
+            }
+
+            state.transformations.forEach((item, index) => {
+                const element = document.createElement('div');
+                element.className = `transform-item${item.enabled ? '' : ' disabled'}`;
+                element.dataset.id = item.id;
+                const unit = transformUnits[item.type];
+                element.innerHTML = `
+                    <div class="transform-heading">
+                        <label><input type="checkbox" data-role="enabled" ${item.enabled ? 'checked' : ''}>${index + 1}. ${transformNames[item.type]}</label>
+                        <div class="transform-actions">
+                            <button type="button" data-action="up" title="Mover para cima" ${index === 0 ? 'disabled' : ''}>↑</button>
+                            <button type="button" data-action="down" title="Mover para baixo" ${index === state.transformations.length - 1 ? 'disabled' : ''}>↓</button>
+                            <button type="button" data-action="remove" title="Remover">×</button>
+                        </div>
+                    </div>
+                    <div class="transform-values">
+                        ${['x', 'y', 'z'].map(axis => `<label>${axis.toUpperCase()} ${unit}<input type="number" step="${item.type === 'rotate' ? 1 : 0.1}" data-axis="${axis}" value="${fmt(item.values[axis], item.type === 'rotate' ? 1 : 2)}"></label>`).join('')}
+                    </div>`;
+                list.appendChild(element);
+            });
+        }
+
+        function refreshTransformations(renderList = false) {
+            if (renderList) renderTransformationList();
+            updateTransformationInformation();
+            render();
+        }
+
         function syncControls() {
             ['a', 'b'].forEach(name => {
                 ['x', 'y', 'z'].forEach(axis => {
@@ -968,8 +1212,11 @@
             ['x', 'y', 'z'].forEach(axis => {
                 document.getElementById(`v${axis}`).value = state.matrixVector[axis];
                 document.getElementById(`v${axis}-out`).value = fmt(state.matrixVector[axis], 1);
+                document.getElementById(`p${axis}`).value = state.transformPoint[axis];
+                document.getElementById(`p${axis}-out`).value = fmt(state.transformPoint[axis], 1);
             });
             if (state.module === 'matrices') updateMatrixInformation();
+            else if (state.module === 'transforms') updateTransformationInformation();
             else updateInformation();
             render();
         }
@@ -1004,6 +1251,12 @@
                 state.matrixVector[axis] = Number(event.target.value);
                 document.getElementById(`v${axis}-out`).value = fmt(state.matrixVector[axis], 1);
                 updateMatrixInformation();
+                render();
+            });
+            document.getElementById(`p${axis}`).addEventListener('input', event => {
+                state.transformPoint[axis] = Number(event.target.value);
+                document.getElementById(`p${axis}-out`).value = fmt(state.transformPoint[axis], 1);
+                updateTransformationInformation();
                 render();
             });
         });
@@ -1048,7 +1301,9 @@
                 });
                 document.getElementById('vectors-panel').hidden = state.module !== 'vectors';
                 document.getElementById('matrices-panel').hidden = state.module !== 'matrices';
+                document.getElementById('transforms-panel').hidden = state.module !== 'transforms';
                 if (state.module === 'matrices') updateMatrixInformation();
+                else if (state.module === 'transforms') updateTransformationInformation();
                 else updateInformation();
                 render();
             });
@@ -1071,6 +1326,55 @@
             });
         });
 
+        document.getElementById('add-transform').addEventListener('click', () => {
+            const type = document.getElementById('transform-type').value;
+            const initial = type === 'scale' ? { x: 1, y: 1, z: 1 } : { x: 0, y: 0, z: 0 };
+            state.transformations.push({ id: nextTransformationId++, type, enabled: true, values: initial });
+            refreshTransformations(true);
+        });
+
+        document.getElementById('transform-list').addEventListener('input', event => {
+            const itemElement = event.target.closest('.transform-item');
+            if (!itemElement) return;
+            const item = state.transformations.find(candidate => candidate.id === Number(itemElement.dataset.id));
+            if (!item) return;
+            if (event.target.dataset.role === 'enabled') {
+                item.enabled = event.target.checked;
+                itemElement.classList.toggle('disabled', !item.enabled);
+            } else if (event.target.dataset.axis) {
+                const value = Number(event.target.value);
+                if (!Number.isFinite(value)) return;
+                item.values[event.target.dataset.axis] = value;
+            }
+            refreshTransformations(false);
+        });
+
+        document.getElementById('transform-list').addEventListener('click', event => {
+            const button = event.target.closest('[data-action]');
+            const itemElement = event.target.closest('.transform-item');
+            if (!button || !itemElement) return;
+            const index = state.transformations.findIndex(item => item.id === Number(itemElement.dataset.id));
+            if (index < 0) return;
+            if (button.dataset.action === 'remove') state.transformations.splice(index, 1);
+            if (button.dataset.action === 'up' && index > 0) {
+                [state.transformations[index - 1], state.transformations[index]] = [state.transformations[index], state.transformations[index - 1]];
+            }
+            if (button.dataset.action === 'down' && index < state.transformations.length - 1) {
+                [state.transformations[index + 1], state.transformations[index]] = [state.transformations[index], state.transformations[index + 1]];
+            }
+            refreshTransformations(true);
+        });
+
+        document.getElementById('clear-transforms').addEventListener('click', () => {
+            state.transformations = [];
+            refreshTransformations(true);
+        });
+
+        document.getElementById('example-transforms').addEventListener('click', () => {
+            state.transformations = cloneTransformations(defaults.transformations).map(item => ({ ...item, id: nextTransformationId++ }));
+            refreshTransformations(true);
+        });
+
         document.getElementById('scalar').addEventListener('input', event => {
             state.scalar = Number(event.target.value);
             document.getElementById('scalar-out').value = fmt(state.scalar, 1);
@@ -1085,6 +1389,9 @@
             state.matrix = defaults.matrix.map(row => [...row]);
             state.matrixB = defaults.matrixB.map(row => [...row]);
             state.matrixVector = { ...defaults.matrixVector };
+            state.transformPoint = { ...defaults.transformPoint };
+            state.transformations = cloneTransformations(defaults.transformations).map(item => ({ ...item, id: nextTransformationId++ }));
+            renderTransformationList();
             syncControls();
         });
 
@@ -1141,7 +1448,10 @@
 
         if (window.location.hash === '#matrizes') {
             document.getElementById('matrices-tab').click();
+        } else if (window.location.hash === '#transformacoes') {
+            document.getElementById('transforms-tab').click();
         }
+        renderTransformationList();
         syncControls();
         resize();
     </script>
